@@ -103,3 +103,11 @@ policy or real chip test protocol is qualified. Technology libraries, design-own
 architecture approval, downstream synthesis/STA validation, broader primitive
 support and fault simulation remain required. There is no raw/eligible fault
 population yet, so every fault coverage denominator remains unavailable.
+
+A fresh local clone of `590c87c` repeated the complete pilot and all 21 Python
+tests under both interpreters. Emitted scan.json and manifest.json were
+byte-identical to the prior run. This is workspace independence on the same host,
+not an independently rebuilt toolchain. One local run measured 0.0296 seconds for
+insertion, 0.0150 seconds for equivalence and 0.0051 seconds for positive simulation;
+peak RSS was not measured by the runner. This four-bit case establishes no
+large-block throughput or physical-design performance target.
