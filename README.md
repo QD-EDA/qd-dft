@@ -60,3 +60,8 @@ unsupported configurations and existing output directories. Generation success
 is not qualification: fault coverage remains unavailable. See
 [the insertion contract and Caliptra evidence](GENERIC_INSERTION_EVIDENCE.md)
 for exact inputs, outputs, simulation/equivalence commands and limitations.
+
+The separate [pinned Linux CI lane](PINNED_CI_EVIDENCE.md) builds Yosys 0.44 and
+Icarus 12.0 from fixed source commits, runs the Caliptra insertion pilot and
+archives evidence for 30 days. This supplements the Python smoke checks; it does
+not qualify a technology library or production scan flow.

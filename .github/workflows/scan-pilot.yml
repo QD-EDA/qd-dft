@@ -1,0 +1,28 @@
+name: Caliptra scan pilot
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-scan-pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex gawk tcl-dev libffi-dev libreadline-dev pkg-config zlib1g-dev autoconf gperf
+      - name: Build pinned tools and verify insertion
+        run: bash ci/run_scan_pilot.sh "$RUNNER_TEMP/qd-scan-build"
+      - name: Archive evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: caliptra-scan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qd-scan-build/evidence/
+          if-no-files-found: error
+          retention-days: 30
