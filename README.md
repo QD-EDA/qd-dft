@@ -20,3 +20,6 @@ The example reports `ready` for the two-cell chain. The policy maps the top-leve
 - `error`: a declared endpoint/chain is broken, a recognized state cell is unscanned, or declared scan connectivity has a fanout, cycle, or reachability error.
 
 Exit codes: `0` for `ready` or `unknown`; `1` for structural `error`; `2` for invalid JSON, missing files, or a missing top. A ratio is available only for a non-empty recognized state inventory with no structural errors. Clock controllability, reset behavior, test-mode activation, cell semantics, electrical integrity, and fault coverage are outside scope.
+
+See [the staged qualification roadmap](ROADMAP.md) for named pilots, unsupported
+cases, independent oracles, performance targets and release gates.
