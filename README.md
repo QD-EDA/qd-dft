@@ -29,3 +29,21 @@ Exit codes: `0` for `ready` or `unknown`; `1` for structural `error`; `2` for in
 
 See [the staged qualification roadmap](ROADMAP.md) for named pilots, unsupported
 cases, independent oracles, performance targets and release gates.
+
+## Strict automation gate
+
+Add `--strict` to retain the structural results while making unverified behavior
+fail the automation gate. Exit codes are `1` for structural errors, `2` for input
+errors and `3` for UNKNOWN. No current input can earn a strict pass: cell behavior,
+test-mode activation and clock/reset operation are not implemented proofs.
+Without the flag, the existing report and exit behavior remain unchanged.
+
+Strict JSON adds `legacy_status`, `unverified`, `scan_chain` (visited cells, possibly
+partial or ambiguous when errors exist), and `cell_inventory`. The inventory lists
+every cell directly in the selected top, its declared roles, connections and raw
+source attribute. It does not recursively expand hierarchy or discover state
+hidden inside macros. Policy declarations are assumptions, not verified models.
+The structural ratio denominator is only the declared recognized state cells;
+it is neither a complete physical state inventory nor a fault denominator.
+
+See [strict inventory evidence](STRICT_EVIDENCE.md) for commands and limitations.
