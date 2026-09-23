@@ -1,4 +1,8 @@
-# QD-DFT: auditable scan and fault evidence
+# QD-DFT: testability analysis and design-for-test implementation
+
+## Intended product (scope clarified 2026-09-23)
+
+QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The current executable only audits structure; insertion is not implemented today.
 
 ## Current capability
 
@@ -22,17 +26,32 @@ coverage. `fault_coverage` remains null. Preserve that distinction and legacy CL
    supply production scan insertion/mapping. Missing mapped collateral blocks
    scan qualification. A generated scan fixture may test the tool, not stand in
    for an actual design's implemented scan chain.
-3. **Testability to patterns:** prove test-mode/clock/reset controllability, check
+3. **DFT implementation:** on a supported single-clock block, map eligible flops
+   to specified scan cells, insert required scan muxes/control ports, and stitch
+   deterministic chains from a reviewed test architecture. Use established
+   synthesis/insertion passes where suitable. Emit a separate transformed netlist,
+   source/cell mapping, chain order, constraints and an insertion manifest. Prove
+   normal-mode equivalence against the immutable original; independently simulate
+   shift/capture and audit every inserted or excluded state element. Extend to
+   test-clock/reset/mode logic, lockup elements, test points and other required
+   structures only under an explicit architecture/library contract. Missing library
+   semantics block insertion; do not create functional stand-ins and call them
+   mapped scan cells. Real-design pilots may use generated insertion outputs,
+   provided their origin and verification remain distinct from owner signoff.
+4. **Testability to patterns:** prove test-mode/clock/reset controllability, check
    chain stitching and shift/capture sequencing across clock domains, then add
    stuck-at fault simulation before an external ATPG adapter. Transition faults,
    compression, lockup latches and memory test require separate modeled scopes.
    Verify emitted patterns with an independent fault simulator and downstream
    loader; use a versioned deterministic JSON pattern intermediate, then the
    particular STIL/WGL/tester subset requested by the actual downstream flow.
-4. **Production qualification:** named cell library, mapped block, chain/mode
+5. **Production qualification:** named cell library, mapped block, chain/mode
    configuration and fault model. Establish pattern replay, coverage accounting,
    ATPG/fault-simulator agreement and approved exclusions. Never infer coverage
    of physical defects, delay faults or memories from a stuck-at result.
+   Qualify both analyzer accuracy and insertion correctness: normal-mode
+   equivalence, verified test behavior, synthesis/STA compatibility, area/timing
+   impact and successful downstream pattern replay on the emitted design.
 
 ## Evidence and release criteria
 
@@ -40,6 +59,8 @@ coverage. `fault_coverage` remains null. Preserve that distinction and legacy CL
   clocks/resets/modes, fault model and exclusions. Outputs: ordered chains,
   control proofs/counterexamples, fault inventory, deterministic patterns,
   replay results, unknowns and per-fault disposition.
+  Insertion also consumes original RTL/netlists and an approved test architecture;
+  it emits derived RTL/netlists, cell/port changes, scan maps and constraints.
 - Denominators: publish raw enumerated faults, equivalence-collapse mapping,
   excluded faults with reasons, eligible faults, detected, proven untestable,
   aborted and unknown. Report raw detection = detected/raw and eligible detection
@@ -49,6 +70,9 @@ coverage. `fault_coverage` remains null. Preserve that distinction and legacy CL
   missing pins, scan cells absent from state inventory, black boxes, clock/reset
   mode contradictions; tiny circuits with exhaustively enumerated faults and
   independently known patterns; downstream round-trip fixtures.
+  Add original/transformed equivalence pairs, excluded-state handling, repeated
+  insertion rejection/idempotence policy, unsupported library cells and injected
+  stitching/mode errors in generated test fixtures.
 - Oracles: library truth tables, separate graph traversal, exhaustive tiny fault
   simulation, external ATPG and independent gate-level pattern replay. Structural
   reachability is never an oracle for fault detection.
@@ -57,6 +81,8 @@ coverage. `fault_coverage` remains null. Preserve that distinction and legacy CL
   No compatible ATPG or tester integration is claimed today.
 - Targets: 100k scan cells <=10 s/1 GiB; tiny exhaustive fault corpus <=60 s;
   pilot 10k stuck-at faults/1k patterns <=10 min/4 GiB, with explicit aborts.
+  Initial insertion target: 100k eligible flops <=60 s/4 GiB excluding equivalence
+  solving; report cell/area growth and timing deltas against owner-agreed budgets.
 - Release: no dropped state/fault inventory, exact chain replay, no unexplained
   oracle discrepancy, documented detection target agreed with the block owner
   before running (not retrofitted to measured coverage), all exclusions reviewed,
@@ -66,8 +92,10 @@ coverage. `fault_coverage` remains null. Preserve that distinction and legacy CL
 
 This is a staged plan, not a production qualification claim. No stage is earned
 by a green unit suite alone. Keep existing passing behavior and raw diagnostics.
-Do not change application RTL/DV, disable assertions, or introduce dummy VIP to
-make a pilot pass. A failed pilot is an artifact to retain, not a test to remove.
+Preserve the immutable application RTL/DV inputs. Intentional DFT/DFD insertion
+is authorized product work: emit a separate derived design with an explicit
+transformation manifest. Never edit the golden inputs, disable assertions or
+introduce dummy VIP merely to manufacture a passing pilot. A failed pilot is an artifact to retain, not a test to remove.
 
 Named pilot pins (full SHAs, never floating branches):
 - Caliptra RTL v2.1.2: `49370266d12cb0c4a8f71b3a0ff7e54ba7d4866e`, generic simulation primitives;
@@ -86,7 +114,8 @@ compare canonical findings and explain any nondeterminism. Archive the bundle
 with the release and publish a supported/unsupported configuration table.
 
 Review every expected finding and every oracle disagreement. Seed known defects
-in separate test fixtures and require their detection; never mutate pilot RTL.
+in separate test fixtures and require their detection; never alter golden pilot RTL to manufacture a pass. Derived insertion outputs
+are permitted and must be verified against the golden input and approved policy.
 Unknowns and exclusions remain counted and visible. Waivers require a stable
 finding/configuration identity, owner, independent reviewer, rationale, evidence
 hash/link, expiry, and revalidation on any relevant input change. A waiver is a

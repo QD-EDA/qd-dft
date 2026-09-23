@@ -1,3 +1,9 @@
+# Product scope
+
+QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The current executable only audits structure; insertion is not implemented today.
+
+The historical v0 specification below describes the existing prototype, not a limit on the intended product. The staged implementation and qualification contract is in ROADMAP.md.
+
 # QD-DFT v0 scope
 
 Build a conservative design-for-test structural audit for Yosys `write_json` netlists. It reports scan readiness and structural gaps; it does not insert scan, generate ATPG vectors, or replace commercial DFT signoff.

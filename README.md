@@ -1,5 +1,11 @@
 # qd-dft
 
+## Product direction
+
+QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The current executable only audits structure; insertion is not implemented today.
+
+## Current prototype
+
 `qd-dft` checks declared scan-chain connectivity and recognized state cells in a Yosys `write_json` netlist. It does not insert scan, generate ATPG patterns, measure stuck-at/transition fault coverage, or replace DFT signoff. A reported structural ratio is not fault coverage; `fault_coverage` is always `null`.
 
 ## Requirements and quick start
