@@ -1,13 +1,22 @@
 # qd-dft
 
-A small structural scan-readiness checker for Yosys `write_json` netlists. It does not insert scan or generate ATPG patterns.
+`qd-dft` checks declared scan-chain connectivity and recognized state cells in a Yosys `write_json` netlist. It does not insert scan, generate ATPG patterns, measure stuck-at/transition fault coverage, or replace DFT signoff. A reported structural ratio is not fault coverage; `fault_coverage` is always `null`.
+
+## Requirements and quick start
+
+Python 3 is required. Yosys is not required to use the included JSON fixture.
 
 ```sh
-python3 qd_dft.py check netlist.json --top top --policy policy.json
-python3 qd_dft.py check netlist.json --top top --policy policy.json --json
+python3 qd_dft.py check tests/fixtures/tiny_chain.json --top top --policy tests/policy.json --json
 python3 -m unittest discover -s tests -v
 ```
 
-Policy maps top-level `test_mode`, `scan_in`, and `scan_out` port names, recognized state-cell types, and scan-cell types with their `scan_in` and `scan_out` pin names. For example, see [tests/policy.json](tests/policy.json). `clock`, `reset`, and `scan_enable` pin names may be declared; clock/reset semantics remain UNKNOWN.
+The example reports `ready` for the two-cell chain. The policy maps the top-level test-mode, scan-in, and scan-out ports; recognized state/scan cell types; and each scan cell's input/output pins. See [tests/policy.json](tests/policy.json). Optional clock/reset pin names are recorded as UNKNOWN behavior because this checker does not model their semantics. Text output summarizes status and counts; `--json` prints the structured result, including diagnostics and any available ratio.
 
-The checker traces declared scan-cell output nets into scan-cell inputs, and reports missing endpoints, broken links, fanout, cycles, and unreachable scan cells. Unknown cell types and blackboxes are reported as UNKNOWN. An empty state inventory is also UNKNOWN. The reported scan-connected/state ratio is structural only; it is not stuck-at or transition fault coverage. This tool does not prove test-mode activation, clock controllability, reset behavior, cell semantics, or electrical integrity. Treat it as a quick audit, not DFT signoff.
+## Results and limits
+
+- `ready`: all recognized state cells are connected in the declared structural scan chain and no structural error or unknown cell was found. This does not prove test-mode activation or usable test clocks/resets.
+- `unknown`: an unrecognized or black-box cell exists, or there are no recognized state cells. The tool does not treat this as signoff.
+- `error`: a declared endpoint/chain is broken, a recognized state cell is unscanned, or declared scan connectivity has a fanout, cycle, or reachability error.
+
+Exit codes: `0` for `ready` or `unknown`; `1` for structural `error`; `2` for invalid JSON, missing files, or a missing top. A ratio is available only for a non-empty recognized state inventory with no structural errors. Clock controllability, reset behavior, test-mode activation, cell semantics, electrical integrity, and fault coverage are outside scope.
