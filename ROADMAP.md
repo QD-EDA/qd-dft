@@ -4,6 +4,20 @@
 
 QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The current executable only audits structure; insertion is not implemented today.
 
+## Commercial replacement objective
+
+The product should replace SpyGlass-style testability analysis and commercial
+DFT implementation functions within published, qualified scopes. This includes
+analysis plus design insertion, not only reporting. Use TestMAX Advisor's RTL/
+netlist testability analysis and TestMAX DFT's implementation role as capability
+benchmarks; these are distinct from CDC/lint products. Maintain a gap matrix for
+controllability/observability, test clocks/resets, scan architecture/insertion,
+test points, fault simulation and ATPG integration. Initial scan-only milestones
+do not complete the full analyzer-and-implementation goal. No proprietary
+implementation or undocumented rule behavior is assumed available.
+
+Reference: https://www.synopsys.com/implementation-and-signoff/test-automation/testmax-advisor.html
+
 ## Current capability
 
 Baseline `84ed4eba7a3ed12c071107fa392e4d77bcb80e2f`: nine tests;
