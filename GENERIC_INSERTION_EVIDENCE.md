@@ -83,8 +83,8 @@ Header hashes are an explicit inventory, not proven include closure.
 
 Versions: Python 3.14.7 and Apple Python 3.9.6; Yosys 0.68+80
 `621d943ac-dirty`; Icarus/vvp 13.0 stable. The installed dirty Yosys build is
-not an immutable release toolchain. Default CI exercises Python only; the
-Caliptra/Yosys/Icarus pilot is optional and separately reproducible.
+not an immutable release toolchain. The original smoke CI exercises Python. A separate pinned Linux lane now runs
+the Caliptra/Yosys/Icarus pilot; see PINNED_CI_EVIDENCE.md for versions and limits.
 
 Local artifacts live in `../evidence/dft-generic-insertion/`, not a published
 release bundle. Initial synthesis failed because the upstream assertion header
