@@ -14,7 +14,52 @@ def load(path):
         return json.load(f)
 
 
-def check(netlist, top, policy):
+def validate_strict(netlist, top, policy):
+    """Validate the consumed JSON subset; declarations are not cell models."""
+    def mapping(value, label):
+        if not isinstance(value, dict):
+            raise InputError(f"{label}: expected object")
+        return value
+
+    def bits(value, label):
+        if not isinstance(value, list) or any(
+            not (type(bit) is int and bit >= 0 or
+                 isinstance(bit, str) and bit in ('0', '1', 'x', 'z')) for bit in value
+        ):
+            raise InputError(f"{label}: expected Yosys bit array")
+
+    mapping(policy, 'policy')
+    for group in ('state_cells', 'scan_cells'):
+        for name, spec in mapping(policy.get(group, {}), group).items():
+            mapping(spec, f'{group}.{name}')
+            required = ('scan_in', 'scan_out') if group == 'scan_cells' else ()
+            for key in set(required) | (set(spec) & {'clock', 'reset', 'scan_enable'}):
+                if not isinstance(spec.get(key), str) or not spec[key]:
+                    raise InputError(f'{group}.{name}.{key}: expected pin name')
+    for key in ('test_mode', 'scan_in', 'scan_out'):
+        if key in policy and (not isinstance(policy[key], str) or not policy[key]):
+            raise InputError(f'{key}: expected port name')
+    modules = mapping(mapping(netlist, 'netlist').get('modules', {}), 'modules')
+    if top not in modules:
+        raise InputError(f"top module {top!r} not found")
+    mod = mapping(modules[top], top)
+    for name, port in mapping(mod.get('ports', {}), 'ports').items():
+        mapping(port, name)
+        bits(port.get('bits', []), name)
+        if port.get('direction') not in ('input', 'output', 'inout'):
+            raise InputError(f'{name}: invalid port direction')
+    for name, cell in mapping(mod.get('cells', {}), 'cells').items():
+        mapping(cell, name)
+        if not isinstance(cell.get('type'), str) or not cell['type']:
+            raise InputError(f'{name}: expected cell type')
+        mapping(cell.get('attributes', {}), f'{name}.attributes')
+        for pin, value in mapping(cell.get('connections', {}), f'{name}.connections').items():
+            bits(value, f'{name}.{pin}')
+
+
+def check(netlist, top, policy, strict=False):
+    if strict:
+        validate_strict(netlist, top, policy)
     modules = netlist.get("modules", {})
     if top not in modules:
         raise InputError(f"top module {top!r} not found")
@@ -22,6 +67,8 @@ def check(netlist, top, policy):
     ports, cells = mod.get("ports", {}), mod.get("cells", {})
     errors, notes = [], []
     state_specs, scan_specs = policy.get("state_cells", {}), policy.get("scan_cells", {})
+    if strict:
+        cells = dict(sorted(cells.items()))
     state = [(n, c) for n, c in cells.items() if c.get("type") in state_specs]
     scan = [(n, c, scan_specs[c.get("type")]) for n, c in cells.items() if c.get("type") in scan_specs]
     recognized = set(state_specs) | set(scan_specs)
@@ -88,6 +135,7 @@ def check(netlist, top, policy):
             if not consumers:
                 errors.append(f"{name}: scan output does not reach a scan input or {sout_name}")
 
+    reached = []
     if scan and sin is not None and sout is not None:
         if len(starts) != 1:
             errors.append(f"declared scan-in reaches {len(starts)} scan cells; expected 1")
@@ -129,6 +177,23 @@ def check(netlist, top, policy):
     if not count:
         result["diagnostics"].append("no recognized state cells; scan ratio unavailable")
         result["diagnostics"].sort()
+    if strict:
+        unverified = ['cell behavior, test-mode activation and clock/reset operation unverified']
+        if unknown:
+            unverified.append('unknown cell models: ' + ', '.join(unknown))
+        if scan_names - state_names:
+            unverified.append('scan cells missing from declared state inventory: ' +
+                              ', '.join(sorted(scan_names - state_names)))
+        if not count:
+            unverified.append('state inventory denominator unavailable')
+        result.update(legacy_status=result['status'], status='error' if errors else 'unknown',
+                      unverified=unverified, scan_chain=reached,
+                      cell_inventory=[{'cell': n, 'type': c['type'],
+                                       'state_declared': n in state_names,
+                                       'scan_declared': n in scan_names,
+                                       'source': c.get('attributes', {}).get('src'),
+                                       'connections': c.get('connections', {})}
+                                      for n, c in cells.items()])
     return result
 
 
@@ -140,9 +205,10 @@ def main():
     ck.add_argument("--top", required=True)
     ck.add_argument("--policy", required=True)
     ck.add_argument("--json", action="store_true")
+    ck.add_argument("--strict", action="store_true", help="report unverified behavior; UNKNOWN exits 3")
     args = ap.parse_args()
     try:
-        result = check(load(args.netlist), args.top, load(args.policy))
+        result = check(load(args.netlist), args.top, load(args.policy), strict=args.strict)
     except (OSError, json.JSONDecodeError, InputError) as e:
         print(f"qd-dft: {e}", file=sys.stderr)
         return 2
@@ -153,7 +219,9 @@ def main():
         print(f"{result['status'].upper()}: {result['top']} state={result['state_cells']} scan={ratio} fault_coverage=UNKNOWN")
         for diagnostic in result["diagnostics"]:
             print(f"- {diagnostic}")
-    return 1 if result["status"] == "error" else 0
+        for reason in result.get('unverified', []):
+            print(f"- UNKNOWN: {reason}")
+    return 1 if result["status"] == "error" else 3 if args.strict else 0
 
 
 if __name__ == "__main__":
