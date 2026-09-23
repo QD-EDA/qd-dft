@@ -1,0 +1,1 @@
+{"test_mode":"test_mode","scan_in":"scan_in","scan_out":"scan_out","state_cells":{"SDFF":{"clock":"CK","reset":"RN"}},"scan_cells":{"SDFF":{"scan_in":"SI","scan_out":"SO","scan_enable":"SE","clock":"CK","reset":"RN"}}}
