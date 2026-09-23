@@ -2,11 +2,11 @@
 
 ## Product direction
 
-QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The current executable only audits structure; insertion is not implemented today.
+QD-DFT will both analyze testability and implement design-for-test by inserting the necessary design elements into RTL or netlists for an explicitly supported scope. Scan-cell mapping, chain stitching and test controls are implementation outputs, alongside fault simulation, ATPG integration and evidence. The original checker audits structure. An optional generic mux-scan insertion pilot now supports a tightly bounded flop-bank scope; technology mapping and production qualification remain unfinished.
 
 ## Current prototype
 
-`qd-dft` checks declared scan-chain connectivity and recognized state cells in a Yosys `write_json` netlist. It does not insert scan, generate ATPG patterns, measure stuck-at/transition fault coverage, or replace DFT signoff. A reported structural ratio is not fault coverage; `fault_coverage` is always `null`.
+`qd-dft` checks declared scan-chain connectivity and recognized state cells in a Yosys `write_json` netlist. The checker does not insert scan or generate ATPG patterns, measure stuck-at/transition fault coverage, or replace DFT signoff. A reported structural ratio is not fault coverage; `fault_coverage` is always `null`.
 
 ## Requirements and quick start
 
@@ -47,3 +47,16 @@ The structural ratio denominator is only the declared recognized state cells;
 it is neither a complete physical state inventory nor a fault denominator.
 
 See [strict inventory evidence](STRICT_EVIDENCE.md) for commands and limitations.
+
+## Optional generic scan insertion
+
+```sh
+python3 qd_scan_insert.py original.json --top TOP --clock clk_i --reset rst_ni --output-dir new-output
+```
+
+This creates a separate generic mux-based scan netlist and chain manifest for a
+single-clock, common-reset bank of scalar Yosys `$_DFF_PN0_` cells. It rejects
+unsupported configurations and existing output directories. Generation success
+is not qualification: fault coverage remains unavailable. See
+[the insertion contract and Caliptra evidence](GENERIC_INSERTION_EVIDENCE.md)
+for exact inputs, outputs, simulation/equivalence commands and limitations.
