@@ -45,7 +45,9 @@ def main():
         yosys('synthesis',f'read_verilog -sv {inc} {rtl}; chparam -set Width 4 caliptra_prim_generic_flop; hierarchy -top caliptra_prim_generic_flop; proc; opt; techmap; opt; write_json {original}')
         run('insert',[sys.executable,str(repo/'qd_scan_insert.py'),str(original),'--top','caliptra_prim_generic_flop',
             '--clock','clk_i','--reset','rst_ni','--output-dir',str(out/'inserted')])
-        manifest=json.loads((out/'inserted/manifest.json').read_text())
+        manifest_path=out/'inserted/manifest.json'
+        run('audit',[sys.executable,str(repo/'qd_scan_audit.py'),str(original),str(scan),str(manifest_path),'--json'])
+        manifest=json.loads(manifest_path.read_text())
         mod=json.loads(original.read_text())['modules']['caliptra_prim_generic_flop']
         if [row['scan_out'] for row in manifest['chain']]!=mod['ports']['q_o']['bits']:
             raise ValueError('pilot scoreboard expects chain order q_o[0] through q_o[3]')
@@ -74,6 +76,14 @@ equiv_status -assert'''
         faulty=json.loads(scan.read_text())
         faulty['modules']['caliptra_prim_generic_flop']['cells']['qd_scan_mux_1']['connections']['B']=['0']
         fault=out/'fault.json';fault.write_text(json.dumps(faulty))
+        fault_manifest=dict(manifest)
+        fault_manifest['output_sha256']=hashlib.sha256(fault.read_bytes()).hexdigest()
+        fault_manifest_path=out/'fault-manifest.json'
+        fault_manifest_path.write_text(json.dumps(fault_manifest))
+        failure=run('reject-scan-audit-fault',[sys.executable,str(repo/'qd_scan_audit.py'),
+                    str(original),str(fault),str(fault_manifest_path)],fail=True)
+        if 'scan netlist differs' not in failure:
+            raise ValueError('scan audit did not reject broken link')
         for name,netlist in [('positive',scan),('fault',fault)]:
             exported=out/(name+'.v')
             yosys('export-'+name,f'read_json {netlist}; rename caliptra_prim_generic_flop scanned; write_verilog {exported}')
@@ -83,7 +93,7 @@ equiv_status -assert'''
             log=run('simulate-'+name,['vvp',str(executable)],fail=name=='fault')
             if ('PASS: 16 capture/shift patterns' if name=='positive' else 'scan state mismatch') not in log:
                 raise ValueError(name+': missing simulation outcome')
-        inputs=[rtl,repo/'qd_scan_insert.py',repo/'fixtures/scan_bank_tb.sv']
+        inputs=[rtl,repo/'qd_scan_insert.py',repo/'qd_scan_audit.py',repo/'fixtures/scan_bank_tb.sv']
         inputs += list(includes[0].glob('caliptra_prim_assert*'))+[includes[1]/'caliptra_sva.svh']
         (out/'inputs.json').write_text(json.dumps({str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},indent=2))
         if subprocess.check_output(['git','status','--porcelain'],cwd=root,text=True):
