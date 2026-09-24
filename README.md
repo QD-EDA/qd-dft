@@ -65,3 +65,19 @@ The separate [pinned Linux CI lane](PINNED_CI_EVIDENCE.md) builds Yosys 0.44 and
 Icarus 12.0 from fixed source commits, runs the Caliptra insertion pilot and
 archives evidence for 30 days. This supplements the Python smoke checks; it does
 not qualify a technology library or production scan flow.
+
+## Audit the generated chain
+
+```sh
+python3 qd_scan_audit.py original.json new-output/scan.json new-output/manifest.json --json
+```
+
+The optional audit checks both file hashes, regenerates the declared generic
+transform from the original, and compares every netlist cell, port, connection
+and manifest field. It reports an ordered chain, `status: unknown`, and null
+fault coverage on a consistent pair; a mismatch exits 1. This catches corruption
+or edits to an insertion artifact, even when its output hash is updated. It is
+not an independent proof of the insertion algorithm: the pinned Caliptra pilot
+uses separate Yosys equivalence and Icarus shift/capture simulation for that.
+The input hash must be compared to a trusted design pin outside this command.
+Cell semantics, test controls, mapping, timing and fault coverage remain UNKNOWN.
