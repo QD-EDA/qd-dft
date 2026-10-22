@@ -81,3 +81,7 @@ not an independent proof of the insertion algorithm: the pinned Caliptra pilot
 uses separate Yosys equivalence and Icarus shift/capture simulation for that.
 The input hash must be compared to a trusted design pin outside this command.
 Cell semantics, test controls, mapping, timing and fault coverage remain UNKNOWN.
+
+## Status
+
+Active prototype, Sep 2026.
